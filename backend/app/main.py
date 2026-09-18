@@ -7,6 +7,7 @@ import jwt
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import text
 from sse_starlette.sse import EventSourceResponse
 from sqlmodel import Session, SQLModel, select
 
@@ -48,7 +49,7 @@ class ErrorResponse(BaseModel):
 def startup():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
-        session.execute("SELECT 1")
+        session.execute(text("SELECT 1"))
     from app.seed.seed import seed_database
     seed_database()
 

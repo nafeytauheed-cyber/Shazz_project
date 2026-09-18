@@ -14,7 +14,7 @@ async function backendAnswer(message: string, token?: string) {
   let answer = '';
   let sources: Array<{ id: string; title: string; section: string; updated: string }> = [];
   for (const event of text.split(/\r?\n\r?\n/)) {
-    const eventName = event.match(/event: ([^\n]+)/)?.[1];
+    const eventName = event.match(/event: ([^\n]+)/)?.[1]?.trim();
     const data = event.match(/data: (.+)/)?.[1];
     if (!data) continue;
     const payload = JSON.parse(data);
