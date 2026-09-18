@@ -29,7 +29,8 @@ export default function LoginPage() {
 
       const data = await res.json();
       localStorage.setItem('sherpa_token', data.token);
-      window.location.href = '/home';
+      localStorage.setItem('sherpa_user', JSON.stringify(data.user));
+      window.location.href = data.user.role === 'admin' ? '/admin' : '/home';
     } catch (err) {
       setError('Unable to sign in with that persona.');
     } finally {

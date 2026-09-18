@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 import jwt
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -55,6 +55,22 @@ class QuestionRequest(BaseModel):
     persona: str = "alex"
 
 
+class QuestionAnswerRequest(BaseModel):
+    answer: str
+
+
+def require_admin(authorization: str | None = Header(default=None)):
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail={"error": {"code": "missing_token", "message": "Authentication required"}})
+    try:
+        claims = jwt.decode(authorization.split(" ", 1)[1], settings.jwt_secret, algorithms=["HS256"])
+    except jwt.PyJWTError as error:
+        raise HTTPException(status_code=401, detail={"error": {"code": "invalid_token", "message": "Invalid authentication token"}}) from error
+    if claims.get("role") != "admin":
+        raise HTTPException(status_code=403, detail={"error": {"code": "admin_required", "message": "Admin access required"}})
+    return claims
+
+
 @app.on_event("startup")
 def startup():
     SQLModel.metadata.create_all(engine)
@@ -90,7 +106,7 @@ def debug_retrieve(q: str):
 
 
 @app.get("/docs")
-def list_documents():
+def list_documents(_: dict = Depends(require_admin)):
     with Session(engine) as session:
         rows = session.exec(select(Document)).all()
         return {"documents": [
@@ -112,7 +128,7 @@ def explore():
 
 
 @app.post("/docs/upload")
-async def upload_document(file: UploadFile = File(...), title: str | None = Form(None)):
+async def upload_document(file: UploadFile = File(...), title: str | None = Form(None), _: dict = Depends(require_admin)):
     doc_title = title or file.filename or "uploaded_doc"
     content = await file.read()
     text = content.decode("utf-8", errors="ignore") or "Uploaded document content."
@@ -131,7 +147,7 @@ async def upload_document(file: UploadFile = File(...), title: str | None = Form
 
 
 @app.delete("/docs/{doc_id}")
-def delete_document(doc_id: int):
+def delete_document(doc_id: int, _: dict = Depends(require_admin)):
     with Session(engine) as session:
         doc = session.get(Document, doc_id)
         if not doc:
@@ -248,10 +264,35 @@ def list_workspaces():
 
 
 @app.get("/api/admin/questions")
-def admin_questions():
+def admin_questions(_: dict = Depends(require_admin)):
     with Session(engine) as session:
         rows = session.exec(select(Question)).all()
-        return {"questions": [{"id": q.id, "text": q.text, "status": q.status} for q in rows]}
+        now = datetime.utcnow()
+        questions = []
+        for question in rows:
+            age_hours = max(0, (now - question.created_at).total_seconds() / 3600)
+            urgency = (3 if question.status == "open" else 0) + min(age_hours / 24, 3)
+            questions.append({"id": question.id, "text": question.text, "status": question.status, "routed_to": question.routed_to, "priority": round(urgency, 2), "created_at": question.created_at})
+        questions.sort(key=lambda item: item["priority"], reverse=True)
+        return {"questions": questions}
+
+
+@app.patch("/api/admin/questions/{question_id}")
+def answer_question(question_id: int, payload: QuestionAnswerRequest, _: dict = Depends(require_admin)):
+    answer = payload.answer.strip()
+    if not answer:
+        raise HTTPException(status_code=400, detail={"error": {"code": "empty_answer", "message": "Answer cannot be empty"}})
+    with Session(engine) as session:
+        question = session.get(Question, question_id)
+        if not question:
+            raise HTTPException(status_code=404, detail={"error": {"code": "question_not_found", "message": "Question not found"}})
+        question.answer_text = answer
+        question.status = "answered"
+        question.answered_by = "Jordan"
+        question.answered_at = datetime.utcnow()
+        session.add(question)
+        session.commit()
+        return {"id": question.id, "status": question.status, "answer": question.answer_text}
 
 
 @app.get("/api/notifications")
