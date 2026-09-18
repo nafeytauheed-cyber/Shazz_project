@@ -92,10 +92,16 @@ The login is demo authentication. It does not require passwords or store secrets
 - Responsive onboarding dashboard
 - Interactive first-week tasks
 - Readiness progress
+- Newcomer FAQs for common onboarding questions
 - Grounded questions about VPN, SSO, repositories, payroll, and leave
 - Source labels on answers
 - Streaming backend chat through the frontend proxy
 - Fallback for unsupported questions
+- Role-aware experience: members see onboarding; admins see the admin workspace
+- Admin-only document upload and knowledge management
+- Prioritized unanswered-question inbox for admins
+- Admins can submit verified answers to routed questions
+- Explore page for tools, people, and knowledge documents
 - Seeded workspaces, users, contacts, documents, chunks, and tasks
 
 ## Deploy Frontend To Vercel
