@@ -161,8 +161,56 @@ Main backend endpoints:
     POST /docs/upload
     DELETE /docs/{doc_id}
 
+    GET  /api/explore
+    POST /api/questions
+    PATCH /api/tasks/{task_id}
 
-7. FRONTEND FALLBACK MODE
+
+7. PERSONALIZED ROADMAP LOOP
+
+1. The dashboard requests GET /api/roadmap?persona=alex.
+2. FastAPI loads the user's persisted tasks from SQLite.
+3. Tasks with incomplete dependencies are returned as locked.
+4. The first available todo task is returned as next_best_action.
+5. The user completes a task in the dashboard.
+6. The frontend sends PATCH /api/tasks/{task_id}.
+7. FastAPI persists the completion timestamp and status.
+8. The dashboard reloads the roadmap.
+9. Readiness, next-best-action, and dependent task states update.
+
+
+8. ADMIN KNOWLEDGE WORKFLOW
+
+1. An admin opens /admin.
+2. The admin uploads a Markdown, text, CSV, PDF, or DOCX file.
+3. The frontend sends the file to the FastAPI document upload endpoint.
+4. FastAPI chunks the text and stores document chunks in SQLite.
+5. The document appears in the Admin knowledge library.
+6. Future questions can retrieve content from the uploaded document.
+
+
+9. EXPLORE WORKFLOW
+
+The /explore screen loads organization resources from GET /api/explore and shows:
+
+    - Tools
+    - People and expertise
+    - Uploaded knowledge documents
+
+
+10. HUMAN ESCALATION WORKFLOW
+
+1. The user asks a question.
+2. Retrieval finds no grounded answer.
+3. Sherpa displays an Ask a human action.
+4. The user submits the question.
+5. FastAPI stores a Question record.
+6. The question is routed to a contact using matching expertise topics.
+7. The routed contact appears in the confirmation response.
+8. Admins can view open questions from the admin questions endpoint.
+
+
+11. FRONTEND FALLBACK MODE
 
 If the FastAPI backend is unavailable, the Next.js API routes use the bundled demo knowledge base in:
 
@@ -180,7 +228,7 @@ Fallback mode supports the main sample topics:
 The frontend automatically prefers FastAPI whenever the backend is available.
 
 
-8. VERCEL WORKFLOW
+12. VERCEL WORKFLOW
 
 1. Import the GitHub repository into Vercel.
 2. Set the project root to:
@@ -196,7 +244,7 @@ To connect a separately deployed FastAPI service, set:
     BACKEND_URL=https://your-backend-domain.example
 
 
-9. TESTING WORKFLOW
+13. TESTING WORKFLOW
 
 Backend tests:
 
@@ -217,7 +265,7 @@ The tests cover:
     - Unsupported questions
 
 
-10. STOPPING THE APPLICATION
+14. STOPPING THE APPLICATION
 
 Docker:
 
@@ -229,7 +277,7 @@ Manual processes:
     Stop the terminal running Next.js.
 
 
-11. IMPORTANT FILES
+15. IMPORTANT FILES
 
     backend/app/main.py
         FastAPI application and API routes.

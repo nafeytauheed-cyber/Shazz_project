@@ -14,7 +14,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.config import settings
 from app.db import engine
-from app.models import Chunk, Document, Question, Task, User, Workspace
+from app.models import Chunk, Contact, Document, Question, Task, User, Workspace
 from app.services.ingest.chunker import chunk_text
 from app.services.llm.base import MockLLM
 from app.services.rag.fallback import fallback_response
@@ -48,6 +48,11 @@ class ErrorResponse(BaseModel):
 
 class TaskUpdateRequest(BaseModel):
     status: str
+
+
+class QuestionRequest(BaseModel):
+    text: str
+    persona: str = "alex"
 
 
 @app.on_event("startup")
@@ -94,6 +99,18 @@ def list_documents():
         ]}
 
 
+@app.get("/api/explore")
+def explore():
+    with Session(engine) as session:
+        documents = session.exec(select(Document).where(Document.workspace_id == 1)).all()
+        contacts = session.exec(select(Contact).where(Contact.workspace_id == 1)).all()
+        return {
+            "documents": [{"id": doc.id, "title": doc.title, "status": doc.status, "tags": doc.tags or []} for doc in documents],
+            "people": [{"id": contact.id, "name": contact.name, "role": contact.role, "email": contact.email, "expertise": contact.expertise_text} for contact in contacts],
+            "tools": [{"name": "Slack", "purpose": "Team communication"}, {"name": "GitHub", "purpose": "Engineering repositories"}, {"name": "VPN", "purpose": "Secure remote access"}],
+        }
+
+
 @app.post("/docs/upload")
 async def upload_document(file: UploadFile = File(...), title: str | None = Form(None)):
     doc_title = title or file.filename or "uploaded_doc"
@@ -122,6 +139,25 @@ def delete_document(doc_id: int):
         session.delete(doc)
         session.commit()
     return {"deleted": True, "id": doc_id}
+
+
+@app.post("/api/questions")
+def create_question(payload: QuestionRequest):
+    text_value = payload.text.strip()
+    if not text_value:
+        raise HTTPException(status_code=400, detail={"error": {"code": "empty_question", "message": "Question cannot be empty"}})
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.email == f"{payload.persona.lower()}@nimbuslabs.example")).first()
+        if not user:
+            raise HTTPException(status_code=404, detail={"error": {"code": "user_not_found", "message": "Persona not found"}})
+        contacts = session.exec(select(Contact).where(Contact.workspace_id == user.workspace_id)).all()
+        lower_text = text_value.lower()
+        routed = next((contact for contact in contacts if any(topic in lower_text for topic in (contact.topics or []))), contacts[0] if contacts else None)
+        question = Question(workspace_id=user.workspace_id, user_id=user.id, text=text_value, status="open", routed_to=routed.id if routed else None)
+        session.add(question)
+        session.commit()
+        session.refresh(question)
+        return {"id": question.id, "status": question.status, "routed_to": {"name": routed.name, "email": routed.email} if routed else None}
 
 
 @app.post("/chat")
