@@ -272,8 +272,8 @@ On startup, the backend creates and seeds the database when it is empty.
 From a fresh clone:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sherpa.git
-cd sherpa
+git clone https://github.com/nafeytauheed-cyber/Shazz_project.git
+cd Shazz_project
 docker compose up --build
 ```
 
@@ -356,7 +356,7 @@ Vercel can deploy the `frontend` directory as a lightweight demo.
 Without `BACKEND_URL`, the frontend uses its bundled demo knowledge base. To use a separately hosted FastAPI backend, configure:
 
 ```text
-BACKEND_URL=https://your-backend.example.com
+BACKEND_URL=https://your-deployed-fastapi-service.example.com
 ```
 
 The complete local architecture is best run with Docker Compose. Vercel alone does not provide the SQLite/FastAPI service from this repository.
@@ -430,12 +430,11 @@ These limitations are deliberate to keep the project free, portable, and easy fo
 
 ## GitHub Publishing
 
-From the repository root after creating an empty GitHub repository:
+From the repository root after creating or linking the GitHub repository:
 
 ```bash
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/sherpa.git
-git push -u origin main
+git remote add origin https://github.com/nafeytauheed-cyber/Shazz_project.git
+git push -u origin master
 ```
 
-Replace `YOUR_USERNAME/sherpa` with the actual repository path. Do not commit credentials, `.env` files, `node_modules`, `.next`, Python virtual environments, or database files.
+The repository is https://github.com/nafeytauheed-cyber/Shazz_project. Do not commit credentials, `.env` files, `node_modules`, `.next`, Python virtual environments, or database files.

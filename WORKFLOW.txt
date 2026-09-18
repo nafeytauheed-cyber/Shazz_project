@@ -5,8 +5,8 @@ SHERPA APPLICATION WORKFLOW
 
 Full Docker workflow:
 
-    git clone https://github.com/YOUR_USERNAME/sherpa.git
-    cd sherpa
+    git clone https://github.com/nafeytauheed-cyber/Shazz_project.git
+    cd Shazz_project
     docker compose up --build
 
 Services:
