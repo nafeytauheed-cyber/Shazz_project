@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #0B4F6C;
+  --accent: #F5A524;
+  --bg: #f3f7f6;
+  --fg: #0f172a;
+}
+
+html {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  background-image: linear-gradient(135deg, rgba(11, 79, 108, 0.05), transparent 35%), linear-gradient(315deg, rgba(245, 165, 36, 0.06), transparent 32%);
+}
+
+* { box-sizing: border-box; }
+
+button, input, textarea { font: inherit; }
+
+button, input { font-family: ui-sans-serif, system-ui, sans-serif; }
+
+.dashboard-grid {
+  background-image: linear-gradient(rgba(11, 79, 108, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(11, 79, 108, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.rise-in {
+  animation: rise-in 500ms ease both;
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+}
+
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+  z-index: 50;
+  background: #fff;
+  padding: 0.5rem 1rem;
+}

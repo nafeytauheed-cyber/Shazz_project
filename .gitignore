@@ -1,0 +1,29 @@
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+
+# Python
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Local environment and databases
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Source archive artifacts
+files.zip
+_zip_extract/

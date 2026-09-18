@@ -1,0 +1,60 @@
+# =====================================================================
+# Sherpa backend - requirements.txt      (Python 3.11+)
+# Install:  python -m venv .venv && source .venv/bin/activate
+#           pip install -r requirements.txt
+# Frontend dependencies are listed in design.txt (section 14).
+# =====================================================================
+
+# ---- Web / API -------------------------------------------------------
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+sse-starlette>=2.1.0            # Server-Sent Events for streaming chat
+python-multipart>=0.0.9         # file uploads
+pydantic>=2.8.0
+pydantic-settings>=2.4.0        # typed env config
+slowapi>=0.1.9                  # rate limiting
+email-validator>=2.2.0
+
+# ---- Database --------------------------------------------------------
+sqlmodel>=0.0.22
+sqlalchemy>=2.0.30
+# psycopg[binary]>=3.2.0        # uncomment when moving to Postgres
+# alembic>=1.13.0               # uncomment if you want migrations
+
+# ---- LLM -------------------------------------------------------------
+anthropic>=0.40.0               # Claude API (Sonnet for answers, Haiku for fast tasks)
+tenacity>=8.5.0                 # retries with backoff
+
+# ---- Retrieval (hybrid RAG) ------------------------------------------
+chromadb>=0.5.5                 # dense vector store
+fastembed>=0.3.6                # local ONNX embeddings (no API key, no torch)
+rank-bm25>=0.2.2                # keyword search
+rapidfuzz>=3.9.0                # fuzzy de-duplication of extracted assets
+numpy>=1.26.0                   # clustering, similarity math
+
+# ---- Ingestion / parsing ---------------------------------------------
+pypdf>=4.3.0
+python-docx>=1.1.2
+trafilatura>=1.12.0             # clean text from URLs
+beautifulsoup4>=4.12.3
+markdown-it-py>=3.0.0
+httpx>=0.27.0
+pyyaml>=6.0.1                   # roadmap templates, seed data
+
+# ---- Auth / security -------------------------------------------------
+pyjwt>=2.9.0
+bcrypt>=4.2.0
+
+# ---- Integrations (optional but recommended) -------------------------
+slack-sdk>=3.31.0               # or use a plain incoming webhook via httpx
+aiosmtplib>=3.0.1               # email notifications to experts
+
+# ---- Utilities -------------------------------------------------------
+python-dotenv>=1.0.1
+orjson>=3.10.0
+structlog>=24.4.0
+
+# ---- Dev / test ------------------------------------------------------
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+ruff>=0.6.0
