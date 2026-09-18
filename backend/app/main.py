@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any
 
 import jwt
@@ -13,7 +14,7 @@ from sqlmodel import Session, SQLModel, select
 
 from app.config import settings
 from app.db import engine
-from app.models import Chunk, Document, Question, User, Workspace
+from app.models import Chunk, Document, Question, Task, User, Workspace
 from app.services.ingest.chunker import chunk_text
 from app.services.llm.base import MockLLM
 from app.services.rag.fallback import fallback_response
@@ -43,6 +44,10 @@ class ChatRequest(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: dict[str, str]
+
+
+class TaskUpdateRequest(BaseModel):
+    status: str
 
 
 @app.on_event("startup")
@@ -151,8 +156,38 @@ def metrics():
 
 
 @app.get("/api/roadmap")
-def roadmap():
-    return {"tasks": [{"title": "SSO login", "status": "todo", "depends_on": []}, {"title": "Request repo access", "status": "locked", "depends_on": [1]}]}
+def roadmap(persona: str = "alex"):
+    with Session(engine) as session:
+        user = session.exec(select(User).where(User.email == f"{persona.lower()}@nimbuslabs.example")).first()
+        if not user:
+            raise HTTPException(status_code=404, detail={"error": {"code": "user_not_found", "message": "Persona not found"}})
+        tasks = session.exec(select(Task).where(Task.user_id == user.id).order_by(Task.id)).all()
+        by_id = {task.id: task for task in tasks}
+        items = []
+        for task in tasks:
+            dependencies = task.depends_on_json or []
+            unlocked = all(by_id.get(dependency_id) and by_id[dependency_id].status == "completed" for dependency_id in dependencies)
+            status = "completed" if task.status == "completed" else ("todo" if unlocked else "locked")
+            items.append({"id": task.id, "title": task.title, "why": task.why, "status": status, "depends_on": dependencies, "est_minutes": task.est_minutes})
+        completed = sum(item["status"] == "completed" for item in items)
+        next_action = next((item for item in items if item["status"] == "todo"), None)
+        readiness = round((completed / len(items)) * 100) if items else 0
+        return {"tasks": items, "readiness": readiness, "next_best_action": next_action}
+
+
+@app.patch("/api/tasks/{task_id}")
+def update_task(task_id: int, payload: TaskUpdateRequest):
+    if payload.status not in {"todo", "completed"}:
+        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_status", "message": "Status must be todo or completed"}})
+    with Session(engine) as session:
+        task = session.get(Task, task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail={"error": {"code": "task_not_found", "message": "Task not found"}})
+        task.status = payload.status
+        task.completed_at = datetime.utcnow() if payload.status == "completed" else None
+        session.add(task)
+        session.commit()
+        return {"id": task.id, "status": task.status, "completed_at": task.completed_at}
 
 
 @app.post("/api/seed")

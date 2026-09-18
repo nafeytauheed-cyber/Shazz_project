@@ -3,14 +3,17 @@
 import { useEffect, useState } from 'react';
 import { ArrowUpRight, BookOpen, Check, CircleHelp, LogOut, Sparkles, Users, Wrench } from 'lucide-react';
 
+type RoadmapTask = { id: number | string; title: string; why?: string; status: 'todo' | 'completed' | 'locked'; depends_on?: Array<number | string> };
+
 export default function HomePage() {
   const [query, setQuery] = useState('How do I get VPN access?');
   const [answer, setAnswer] = useState('');
   const [source, setSource] = useState<{ title: string; section: string } | null>(null);
   const [fallback, setFallback] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [completed, setCompleted] = useState<string[]>([]);
-  const tasks = ['Complete SSO setup', 'Enroll in MFA', 'Request repository access'];
+  const [tasks, setTasks] = useState<RoadmapTask[]>([]);
+  const [readiness, setReadiness] = useState(0);
+  const [nextAction, setNextAction] = useState<RoadmapTask | null>(null);
   const quickQuestions = ['How do I get VPN access?', 'What should I set up first?', 'Who can help with payroll?'];
 
   const askSherpa = async () => {
@@ -39,7 +42,23 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!localStorage.getItem('sherpa_token')) window.location.href = '/login';
+    fetch('/api/roadmap?persona=alex').then((res) => res.json()).then((data) => {
+      setTasks(data.tasks || []);
+      setReadiness(data.readiness || 0);
+      setNextAction(data.next_best_action || null);
+    }).catch(() => undefined);
   }, []);
+
+  const toggleTask = async (task: RoadmapTask) => {
+    if (task.status === 'locked') return;
+    const status = task.status === 'completed' ? 'todo' : 'completed';
+    await fetch(`/api/tasks/${task.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    const response = await fetch('/api/roadmap?persona=alex');
+    const data = await response.json();
+    setTasks(data.tasks || []);
+    setReadiness(data.readiness || 0);
+    setNextAction(data.next_best_action || null);
+  };
 
   return (
     <main id="main-content" className="dashboard-grid min-h-screen px-4 py-5 text-slate-900 sm:px-8 lg:px-12">
@@ -50,10 +69,10 @@ export default function HomePage() {
         </nav>
         <section className="rise-in grid gap-8 py-10 lg:grid-cols-[1fr_280px] lg:items-end">
           <div><p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary">Tuesday, September 19</p><h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl">A clearer first week<br /><span className="text-primary">starts here.</span></h1><p className="mt-4 max-w-xl text-lg leading-7 text-slate-600">Good morning, Alex. Sherpa keeps your questions, people, and next steps in one calm place.</p></div>
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-600">Readiness</span><span className="text-2xl font-bold text-primary">82%</span></div><div className="mt-4 h-2 rounded-full bg-slate-100"><div className="h-2 w-[82%] rounded-full bg-accent" /></div><p className="mt-3 text-xs text-slate-500">You are on track for week one.</p></div>
+          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><span className="text-sm font-semibold text-slate-600">Readiness</span><span className="text-2xl font-bold text-primary">{readiness}%</span></div><div className="mt-4 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-accent transition-all" style={{ width: `${readiness}%` }} /></div><p className="mt-3 text-xs text-slate-500">{nextAction ? `Next: ${nextAction.title}` : 'You are ready for week one.'}</p></div>
         </section>
         <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Your path</p><h2 className="mt-1 text-2xl font-bold">Next steps</h2></div><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">2 of 5 complete</span></div><div className="mt-6 space-y-3">{tasks.map((task, index) => { const done = completed.includes(task); return <button key={task} onClick={() => setCompleted(done ? completed.filter((item) => item !== task) : [...completed, task])} className="flex w-full items-center gap-4 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-slate-50"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${done ? 'border-primary bg-primary text-white' : index === 2 ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-accent bg-amber-50 text-amber-700'}`}>{done ? <Check size={16} /> : <span className="text-xs font-bold">0{index + 1}</span>}</span><span className={`flex-1 text-sm font-semibold ${done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{task}</span><ArrowUpRight size={16} className="text-slate-300" /></button>; })}</div></div>
+          <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"><div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Your path</p><h2 className="mt-1 text-2xl font-bold">Next steps</h2></div><span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">{tasks.filter((task) => task.status === 'completed').length} of {tasks.length} complete</span></div><div className="mt-6 space-y-3">{tasks.map((task, index) => { const done = task.status === 'completed'; const locked = task.status === 'locked'; return <button key={String(task.id)} onClick={() => toggleTask(task)} disabled={locked} className="flex w-full items-center gap-4 rounded-xl border border-slate-100 p-3 text-left transition hover:border-primary/30 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${done ? 'border-primary bg-primary text-white' : locked ? 'border-slate-200 bg-slate-50 text-slate-400' : 'border-accent bg-amber-50 text-amber-700'}`}>{done ? <Check size={16} /> : <span className="text-xs font-bold">0{index + 1}</span>}</span><span className={`flex-1 text-sm font-semibold ${done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{task.title}<span className="mt-1 block text-xs font-normal text-slate-400">{locked ? 'Complete the prerequisite first' : task.why}</span></span><ArrowUpRight size={16} className="text-slate-300" /></button>; })}</div></div>
           <div className="rounded-2xl bg-primary p-6 text-white shadow-sm"><Users size={22} className="text-amber-300" /><h2 className="mt-5 text-2xl font-bold">People in your corner</h2><p className="mt-2 text-sm leading-6 text-slate-200">You do not have to figure everything out alone.</p><div className="mt-6 space-y-3 text-sm"><div className="flex items-center justify-between border-b border-white/15 pb-3"><span>IT Helpdesk</span><span className="text-xs text-amber-300">Access</span></div><div className="flex items-center justify-between border-b border-white/15 pb-3"><span>HR & Payroll</span><span className="text-xs text-amber-300">People</span></div><div className="flex items-center justify-between"><span>Engineering Manager</span><span className="text-xs text-amber-300">Team</span></div></div></div>
         </section>
         <section className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
