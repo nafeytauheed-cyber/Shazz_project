@@ -49,6 +49,8 @@ def startup():
     SQLModel.metadata.create_all(engine)
     with Session(engine) as session:
         session.execute("SELECT 1")
+    from app.seed.seed import seed_database
+    seed_database()
 
 
 @app.get("/api/health")

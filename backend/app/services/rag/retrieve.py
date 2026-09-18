@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from sqlmodel import Session, select
@@ -13,7 +14,8 @@ def normalize_query(query: str) -> str:
 
 
 def retrieve_chunks(query: str, workspace_id: int = 1, limit: int = 8) -> list[dict[str, Any]]:
-    keywords = [w for w in normalize_query(query).split() if len(w) > 2]
+    stop_words = {"what", "when", "where", "which", "who", "how", "does", "the", "this", "that", "with", "for", "are", "can", "get"}
+    keywords = [w for w in re.findall(r"[a-z0-9]+", normalize_query(query)) if len(w) > 2 and w not in stop_words]
     if not keywords:
         return []
 
@@ -25,10 +27,12 @@ def retrieve_chunks(query: str, workspace_id: int = 1, limit: int = 8) -> list[d
     scored: list[tuple[float, dict[str, Any]]] = []
     for chunk in all_chunks:
         text = (chunk.text or '').lower()
+        text_terms = re.findall(r"[a-z0-9]+", text)
         score = 0.0
         for term in keywords:
-            score += text.count(term) * 2.0
-            if term in text:
+            occurrences = text_terms.count(term)
+            score += occurrences * 2.0
+            if occurrences:
                 score += 0.75
         domain_terms = ["vpn", "access", "sso", "repo", "security", "payroll", "leave", "team"]
         if any(term in keywords and term in text for term in domain_terms):
