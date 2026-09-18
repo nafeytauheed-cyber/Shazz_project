@@ -291,6 +291,14 @@ docker compose down
 
 ### Run without Docker
 
+On Windows, the easiest one-command startup is:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-local.ps1
+```
+
+That script starts both services, verifies the backend and frontend, and prints the connected application URL.
+
 Terminal 1, backend:
 
 ```bash
@@ -326,6 +334,8 @@ npm run dev
 ```
 
 Open http://localhost:3000.
+
+The frontend connects to FastAPI through the Next.js route handlers. Browser requests go to `http://localhost:3000/api/...`; the route handlers forward them to `http://localhost:8000/...`. Keep both services running in separate processes.
 
 ## Environment Variables
 
@@ -431,6 +441,7 @@ sherpa/
     Dockerfile
     package.json
   docker-compose.yml           Full local stack
+  start-local.ps1              One-command Windows startup
   README.md                    Complete project documentation
   WORKFLOW.txt                 Detailed workflow reference
   .env.example                 Environment template
