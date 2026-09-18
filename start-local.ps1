@@ -8,6 +8,17 @@ $node = 'C:\Program Files\nodejs\node.exe'
 
 if (-not (Test-Path $python)) { $python = 'python' }
 if (-not (Test-Path $node)) { $node = 'node' }
+$npm = 'C:\Program Files\nodejs\npm.cmd'
+if (-not (Test-Path $npm)) { $npm = 'npm' }
+
+if (-not (Test-Path (Join-Path $frontend 'node_modules'))) {
+    Write-Host 'Installing frontend packages...' -ForegroundColor Yellow
+    & $npm --prefix $frontend install
+}
+if (-not (Test-Path (Join-Path $frontend '.next'))) {
+    Write-Host 'Building frontend...' -ForegroundColor Yellow
+    & $npm --prefix $frontend run build
+}
 
 Write-Host 'Starting Sherpa backend on http://localhost:8000 ...' -ForegroundColor Cyan
 Start-Process -FilePath $python -ArgumentList '-m','uvicorn','app.main:app','--host','0.0.0.0','--port','8000' -WorkingDirectory $backend
