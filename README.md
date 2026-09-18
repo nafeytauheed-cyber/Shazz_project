@@ -346,20 +346,44 @@ Frontend settings include:
 
 ## Vercel Deployment
 
-Vercel can deploy the `frontend` directory as a lightweight demo.
+The recommended one-click user experience uses Vercel for the frontend and Render for the FastAPI backend. Your friend opens only the Vercel URL.
+
+### Deploy the backend first
+
+1. Open https://dashboard.render.com.
+2. Choose **New + -> Blueprint**.
+3. Select this GitHub repository.
+4. Render detects the root `render.yaml` file and creates the `sherpa-api` service.
+5. Wait for the health check at `/api/health` to pass.
+6. Copy the Render URL, for example:
+
+  `https://sherpa-api.onrender.com`
+
+Render may sleep on its free tier after inactivity. The first request after sleep can take a little longer.
+
+### Deploy the frontend
 
 1. Import the repository into Vercel.
 2. Set **Root Directory** to `frontend`.
 3. Keep the framework set to Next.js.
-4. Deploy with no environment variables.
+4. Deploy once.
+5. In Vercel **Settings -> Environment Variables**, add:
 
-Without `BACKEND_URL`, the frontend uses its bundled demo knowledge base. To use a separately hosted FastAPI backend, configure:
+  ```text
+  BACKEND_URL=https://sherpa-api.onrender.com
+  ```
+
+6. Redeploy the Vercel project.
+
+Now your friend opens only the Vercel URL. Login, chat, retrieval, roadmap updates, admin uploads, and question routing use the hosted FastAPI backend.
+
+Without `BACKEND_URL`, the frontend uses its bundled demo knowledge base as an offline fallback. To connect a separately hosted FastAPI backend, configure:
 
 ```text
 BACKEND_URL=https://your-deployed-fastapi-service.example.com
 ```
 
-The complete local architecture is best run with Docker Compose. Vercel alone does not provide the SQLite/FastAPI service from this repository.
+The complete local architecture remains available with Docker Compose. Vercel alone does not run the Python service from this repository.
 
 ## Testing
 

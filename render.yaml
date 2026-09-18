@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: sherpa-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: FRONTEND_URL
+        value: https://YOUR-VERCEL-APP.vercel.app
