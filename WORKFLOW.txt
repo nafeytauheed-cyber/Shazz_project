@@ -1,0 +1,262 @@
+SHERPA APPLICATION WORKFLOW
+============================
+
+1. START THE APPLICATION
+
+Full Docker workflow:
+
+    git clone https://github.com/YOUR_USERNAME/sherpa.git
+    cd sherpa
+    docker compose up --build
+
+Services:
+
+    Frontend: http://localhost:3000
+    Backend:  http://localhost:8000
+    API docs: http://localhost:8000/docs
+
+The backend creates the SQLite database, tables, and demo seed data when it starts.
+
+Without Docker:
+
+Terminal 1 - backend:
+
+    cd backend
+    python -m venv .venv
+    .venv\Scripts\activate                 (Windows)
+    source .venv/bin/activate                (macOS/Linux)
+    pip install -r requirements.txt
+    python -m uvicorn app.main:app --reload --port 8000
+
+Terminal 2 - frontend:
+
+    cd frontend
+    npm install
+    npm run dev
+
+Then open http://localhost:3000.
+
+
+2. OPENING THE APP
+
+The browser opens http://localhost:3000.
+
+The root route redirects to /login.
+
+The login screen displays three demo personas:
+
+    Alex   Backend newcomer
+    Sam    Product newcomer
+    Jordan Admin
+
+No password is required in demo mode.
+
+
+3. DEMO LOGIN FLOW
+
+1. The user selects a persona.
+2. The frontend sends POST /api/auth/demo.
+3. The Next.js route handler tries to contact the FastAPI backend at:
+
+       POST http://localhost:8000/auth/demo
+
+4. FastAPI creates a demo JWT and returns the user profile.
+5. The frontend stores the token in localStorage.
+6. The browser navigates to /home.
+7. If the backend is unavailable, the frontend uses a local demo token so the UI can still open.
+
+
+4. HOME DASHBOARD FLOW
+
+The home screen displays:
+
+    - Sherpa branding
+    - Readiness score
+    - First-week onboarding tasks
+    - Interactive task completion states
+    - People and support contacts
+    - Common tools
+    - Quick question suggestions
+    - Ask Sherpa input
+
+The task checklist is currently handled in the frontend for the lightweight demo experience.
+
+
+5. ASK SHERPA FLOW
+
+1. The user types a question or selects a quick question.
+2. The frontend sends POST /api/chat.
+3. The Next.js chat route tries the FastAPI backend first.
+4. FastAPI performs the following steps:
+
+       a. Normalizes the question.
+       b. Detects a basic intent.
+       c. Searches seeded document chunks.
+       d. Scores exact word matches.
+       e. Rejects unrelated or weak evidence.
+       f. Generates an extractive grounded answer.
+       g. Returns NO_ANSWER when evidence is insufficient.
+       h. Streams answer tokens through Server-Sent Events.
+       i. Sends matching sources and follow-up data.
+
+5. The Next.js route collects the streamed backend events into a JSON response.
+6. The frontend displays:
+
+       - Answer text
+       - Source document and section
+       - Fallback message when there is no answer
+       - IT Helpdesk contact information when appropriate
+
+Example answerable question:
+
+    How do I get VPN access?
+
+Expected behavior:
+
+    The app returns VPN instructions based on the seeded IT and Access Guide,
+    with a source label.
+
+Example unsupported question:
+
+    What is the CEO's favorite color?
+
+Expected behavior:
+
+    The app returns a grounded fallback and does not invent an answer.
+
+
+6. BACKEND DATA FLOW
+
+FastAPI startup:
+
+    1. Load configuration.
+    2. Create SQLite tables.
+    3. Verify the database connection.
+    4. Seed Nimbus Labs and Robotics Club if the database is empty.
+
+Seeded data includes:
+
+    - Workspaces
+    - Teams
+    - Users
+    - Contacts
+    - Documents
+    - Document chunks
+    - Onboarding tasks
+
+Main backend endpoints:
+
+    GET  /api/health
+    POST /auth/demo
+    POST /chat
+    GET  /api/debug/retrieve?q=vpn
+    GET  /api/roadmap
+    GET  /api/admin/metrics
+    GET  /api/users
+    GET  /api/workspaces
+    GET  /api/admin/questions
+    GET  /api/notifications
+    POST /api/seed
+    GET  /docs
+    POST /docs/upload
+    DELETE /docs/{doc_id}
+
+
+7. FRONTEND FALLBACK MODE
+
+If the FastAPI backend is unavailable, the Next.js API routes use the bundled demo knowledge base in:
+
+    frontend/lib/demo.ts
+
+This allows the frontend to run on Vercel without Python, SQLite, or an AI API key.
+
+Fallback mode supports the main sample topics:
+
+    - VPN access
+    - SSO setup
+    - Repository access
+    - Payroll and leave
+
+The frontend automatically prefers FastAPI whenever the backend is available.
+
+
+8. VERCEL WORKFLOW
+
+1. Import the GitHub repository into Vercel.
+2. Set the project root to:
+
+       frontend
+
+3. Deploy with no environment variables for frontend-only demo mode.
+4. Vercel serves the Next.js UI and serverless route handlers.
+5. The local bundled knowledge base handles answers if no backend URL is configured.
+
+To connect a separately deployed FastAPI service, set:
+
+    BACKEND_URL=https://your-backend-domain.example
+
+
+9. TESTING WORKFLOW
+
+Backend tests:
+
+    cd backend
+    python -m pytest -q
+
+Frontend production build:
+
+    cd frontend
+    npm run build
+
+The tests cover:
+
+    - Chunking
+    - Retrieval
+    - Chat SSE responses
+    - Grounded fallback behavior
+    - Unsupported questions
+
+
+10. STOPPING THE APPLICATION
+
+Docker:
+
+    docker compose down
+
+Manual processes:
+
+    Stop the terminal running Uvicorn.
+    Stop the terminal running Next.js.
+
+
+11. IMPORTANT FILES
+
+    backend/app/main.py
+        FastAPI application and API routes.
+
+    backend/app/seed/seed.py
+        Demo database and onboarding data.
+
+    backend/app/services/rag/retrieve.py
+        Exact-token document retrieval.
+
+    backend/app/services/rag/generate.py
+        Grounded answer generation.
+
+    frontend/app/login/page.tsx
+        Persona login screen.
+
+    frontend/app/home/page.tsx
+        Onboarding dashboard and Ask Sherpa UI.
+
+    frontend/app/api/auth/demo/route.ts
+        Backend login proxy and offline fallback.
+
+    frontend/app/api/chat/route.ts
+        Backend chat proxy and offline fallback.
+
+    frontend/lib/demo.ts
+        Lightweight frontend demo knowledge base.
+
+    docker-compose.yml
+        Full frontend and backend local deployment.
